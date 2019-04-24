@@ -35,26 +35,33 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#  include <config.h>
+#include <config.h>
 #endif
 
 // you man very well need to edit this, don't worry though, email is only sent
 // if bad things happend and it has to exit when in daemon mode.
+
+// this just for NETGERA MIMO project spec
+// add by loren.hong 03-26-07
+#ifndef NETGEAR_PROJECT
+#define NETGEAR_PROJECT 1
+#endif
+
+#ifndef QDNS
+#define QDNS
+#endif
+
+#ifndef DTDNS
+#define DTDNS
+#endif
+
+#ifndef HDNS
+#define HDNS //Honeywell-smarthome
+#endif
+//#define ROUTER_NAME "JWNR2000"
+#define ROUTER_NAME "Router"
+
 #define SEND_EMAIL_CMD "mail"
-
-#define EZIP_DEFAULT_SERVER "www.EZ-IP.Net"
-#define EZIP_DEFAULT_PORT "80"
-#define EZIP_REQUEST "/members/update/"
-
-#define PGPOW_DEFAULT_SERVER "www.penguinpowered.com"
-#define PGPOW_DEFAULT_PORT "2345"
-#define PGPOW_REQUEST "update"
-#define PGPOW_VERSION "1.0"
-
-#define DHS_DEFAULT_SERVER "members.dhs.org"
-#define DHS_DEFAULT_PORT "80"
-#define DHS_REQUEST "/nic/hosts"
-#define DHS_SUCKY_TIMEOUT 60
 
 #define DYNDNS_DEFAULT_SERVER "members.dyndns.org"
 #define DYNDNS_DEFAULT_PORT "80"
@@ -62,45 +69,36 @@
 #define DYNDNS_STAT_REQUEST "/nic/update"
 #define DYNDNS_MAX_INTERVAL (25*24*3600)
 
-#define ODS_DEFAULT_SERVER "update.ods.org"
-#define ODS_DEFAULT_PORT "7070"
-#define ODS_REQUEST "update"
+#ifdef QDNS
+#define QDNS_DEFAULT_SERVER "members.3322.org"
+#define QDNS_DEFAULT_PORT "80"
+#define QDNS_REQUEST "/dyndns/update"
+#define QDNS_STAT_REQUEST "/dyndns/update"
+#define QDNS_MAX_INTERVAL (25*24*3600)
+#endif
 
-#define TZO_DEFAULT_SERVER "cgi.tzo.com"
-#define TZO_DEFAULT_PORT "80"
-#define TZO_REQUEST "/webclient/signedon.html"
+#ifdef DTDNS
+#define DTDNS_DEFAULT_SERVER "www.dtdns.com"
+#define DTDNS_DEFAULT_PORT "80"
+#define DTDNS_REQUEST "/api/autodns.cfm?"
+#define DTDNS_STAT_REQUEST ""
+#define DTDNS_MAX_INTERVAL (25*24*3600)
+#endif
 
-#define GNUDIP_DEFAULT_SERVER ""
-#define GNUDIP_DEFAULT_PORT "3495"
-#define GNUDIP_REQUEST "0"
+#ifdef HDNS
+#define HDNS_DEFAULT_SERVER "ddns.honeywell-smarthome.com"
+#define HDNS_DEFAULT_PORT "80"
+#define HDNS_REQUEST "/nic/update"
+#define HDNS_STAT_REQUEST "/nic/update"
+#define HDNS_MAX_INTERVAL (25*24*3600)
+#endif
 
-#define EASYDNS_DEFAULT_SERVER "members.easydns.com"
-#define EASYDNS_DEFAULT_PORT "80"
-#define EASYDNS_REQUEST "/dyn/ez-ipupdate.php"
-
-#define JUSTL_DEFAULT_SERVER "www.justlinux.com"
-#define JUSTL_DEFAULT_PORT "80"
-#define JUSTL_REQUEST "/bin/controlpanel/dyndns/jlc.pl"
-#define JUSTL_VERSION "2.0"
-
-#define DYNS_DEFAULT_SERVER "www.dyns.cx"
-#define DYNS_DEFAULT_PORT "80"
-#define DYNS_REQUEST "/postscript.php"
-
-#define HN_DEFAULT_SERVER "www.hn.org"
-#define HN_DEFAULT_PORT "80"
-#define HN_REQUEST "/vanity/update"
-
-#define ZONEEDIT_DEFAULT_SERVER "www.zoneedit.com"
-#define ZONEEDIT_DEFAULT_PORT "80"
-#define ZONEEDIT_REQUEST "/auth/dynamic.html"
-
-#ifdef USE_MD5
-#  define SERVICES_STR "ezip, pgpow, dhs, dyndns, dyndns-static, ods, tzo, gnudip, easydns, justlinux, dyns, hn, zoneedit"
-#  define SERVICES_HELP_STR "ezip, pgpow, dhs, dyndns, \n\t\t\t\tdyndns-static, ods, tzo, gnudip, easydns, \n\t\t\t\tjustlinux, dyns, hn, zoneedit"
+#ifdef QDNS
+#define SERVICES_STR "dyndns, dyndns-static,qdns,qdns-static,dtdns,dtdns-static,hdns,hdns-static"
+#define SERVICES_HELP_STR "dyndns, dyndns-static,qdns,qdns-static,dtdns,dtdns-static,hdns,hdns-static"
 #else
-#  define SERVICES_STR "ezip, pgpow, dhs, dyndns, dyndns-static, ods, tzo, easydns, justlinux, dyns, hn, zoneedit"
-#  define SERVICES_HELP_STR "ezip, pgpow, dhs, dyndns, \n\t\t\t\tdyndns-static, ods, tzo, easydns, \n\t\t\t\tjustlinux, dyns, hn, zoneedit"
+#define SERVICES_STR "dyndns, dyndns-static"
+#define SERVICES_HELP_STR "dyndns, dyndns-static"
 #endif
 
 #define DEFAULT_TIMEOUT 120
@@ -108,70 +106,59 @@
 #define DEFAULT_RESOLV_PERIOD 30
 
 #ifdef DEBUG
-#  define BUFFER_SIZE (16*1024)
+#define BUFFER_SIZE (16*1024)
 #else
-#  define BUFFER_SIZE (4*1024-1)
+#define BUFFER_SIZE (4*1024-1)
 #endif
 
-#ifdef HAVE_GETOPT_H
-#  include <getopt.h>
-#endif
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
-#if HAVE_FCNTL_H
-#  include <fcntl.h>
-#endif
+#include <sys/klog.h>
+#include <linux/kernel.h>
+#include <fcntl.h>
 #include <netinet/in.h>
-#if HAVE_ARPA_INET_H
-#  include <arpa/inet.h>
-#endif
-#if HAVE_ERRNO_H
-#  include <errno.h>
-#endif
+#include <arpa/inet.h>
+#include <errno.h>
 #include <netdb.h>
 #include <sys/socket.h>
-#if HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-#endif
-#if HAVE_SIGNAL_H
-#  include <signal.h>
-#endif
-#if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-#endif
+#include <sys/types.h>
+#include <signal.h>
+#include <sys/time.h>
+
 #if HAVE_SYS_WAIT_H
-#  include <sys/wait.h>
+	#include <sys/wait.h>
 #endif
-#if HAVE_SYSLOG_H
-#  include <syslog.h>
-#endif
+#include <syslog.h>
+
 #if HAVE_STDARG_H
-#  include <stdarg.h>
+	#include <stdarg.h>
 #endif
 #include <error.h>
+
 #if HAVE_PWD_H && HAVE_GRP_H
-#  include <pwd.h>
-#  include <grp.h>
+	#include <pwd.h>
+	#include <grp.h>
 #endif
+
 #if defined(HAVE_FORK) && !defined(HAVE_VFORK)
-#  define vfork fork
+	#define vfork fork
 #endif
+
 #if USE_MD5
-#  include <md5.h>
-#  define MD5_DIGEST_BYTES (16)
+	#include <md5.h>
+	#define MD5_DIGEST_BYTES (16)
 #endif
 
+#define IF_LOOKUP 1
+#include <sys/ioctl.h>
+#include <net/if.h>
 
-#if __linux__ || __SVR4 || __OpenBSD__ || __FreeBSD__ || __NetBSD__
-#  define IF_LOOKUP 1
-#  include <sys/ioctl.h>
-#  include <net/if.h>
-#  ifdef HAVE_SYS_SOCKIO_H
-#    include <sys/sockio.h>
-#  endif
+#ifdef HAVE_SYS_SOCKIO_H
+	#include <sys/sockio.h>
 #endif
 
 #include <dprintf.h>
@@ -180,34 +167,37 @@
 #include <pid_file.h>
 
 #if !defined(__GNUC__) && !defined(HAVE_SNPRINTF)
-#error "get gcc, fix this code, or find yourself a snprintf!"
+	#error "get gcc, fix this code, or find yourself a snprintf!"
 #else
-#  if HAVE_SNPRINTF
-#    define  snprintf(x, y, z...) snprintf(x, y, ## z)
-#  else
-#    define  snprintf(x, y, z...) sprintf(x, ## z)
-#  endif
+#if HAVE_SNPRINTF
+	#define  snprintf(x, y, z...) snprintf(x, y, ## z)
+#else
+	#define  snprintf(x, y, z...) sprintf(x, ## z)
 #endif
-#if HAVE_VSNPRINTF
-#  define  vsnprintf(x, y, z...) vsnprintf(x, y, ## z)
-#else
-#  define  vsnprintf(x, y, z...) vsprintf(x, ## z)
 #endif
 
-#ifndef HAVE_HERROR
-#  define herror(x) fprintf(stderr, "%s: error\n", x)
+#if HAVE_VSNPRINTF
+	#define  vsnprintf(x, y, z...) vsnprintf(x, y, ## z)
+#else
+	#define  vsnprintf(x, y, z...) vsprintf(x, ## z)
 #endif
+
+#define herror(x) fprintf(stderr, "%s: error\n", x)
 
 #define N_STR(x) (x == NULL ? "" : x)
 
 #ifndef OS
-#  define OS "unknown"
+	#define OS "unknown"
 #endif
 
 // the min period for checking the interface
 #define MIN_UPDATE_PERIOD 10
 // the min/max time to wait if we fail to update
+#if ( NETGEAR_PROJECT )
+#define MIN_WAIT_PERIOD 3600
+#else
 #define MIN_WAIT_PERIOD 300
+#endif
 #define MAX_WAIT_PERIOD (2*3600)
 // the min time that max-period can be set to
 #define MIN_MAXINTERVAL (24*3600)
@@ -220,19 +210,20 @@
 
 enum {
   SERV_NULL,
-  SERV_EZIP,
-  SERV_PGPOW,
-  SERV_DHS,
   SERV_DYNDNS,
   SERV_DYNDNS_STAT,
-  SERV_ODS,
-  SERV_TZO,
-  SERV_GNUDIP,
-  SERV_EASYDNS,
-  SERV_JUSTL,
-  SERV_DYNS,
-  SERV_HN,
-  SERV_ZONEEDIT,
+#ifdef QDNS
+  SERV_QDNS,
+  SERV_QDNS_STAT,
+#endif
+#ifdef DTDNS
+	SERV_DTDNS,
+	SERV_DTDNS_STAT,
+#endif
+#ifdef HDNS
+	SERV_HDNS,
+	SERV_HDNS_STAT,
+#endif
 };
 
 struct service_t
@@ -252,6 +243,7 @@ enum {
   UPDATERES_OK = 0,
   UPDATERES_ERROR,
   UPDATERES_SHUTDOWN,
+  UPDATERES_TIMEOUT,
 };
 
 /**************************************************/
@@ -271,6 +263,7 @@ int wildcard = 0;
 char *mx = NULL;
 char *url = NULL;
 char *host = NULL;
+char *user_agent = NULL;
 char *cloak_title = NULL;
 char *interface = NULL;
 int ntrys = 1;
@@ -306,51 +299,10 @@ static struct service_t NULL_service = {
   ""
 };
 
-int EZIP_update_entry(void);
-int EZIP_check_info(void);
-static char *EZIP_fields_used[] = { "server", "user", "address", "wildcard", "mx", "url", "host", NULL };
-static struct service_t EZIP_service = {
-  SERV_EZIP,
-  "ez-ip",
-  NULL,
-  EZIP_update_entry,
-  EZIP_check_info,
-  EZIP_fields_used,
-  EZIP_DEFAULT_SERVER,
-  EZIP_DEFAULT_PORT,
-  EZIP_REQUEST
-};
-
-int PGPOW_update_entry(void);
-int PGPOW_check_info(void);
-static char *PGPOW_fields_used[] = { "server", "host", NULL };
-static struct service_t PGPOW_service = {
-  SERV_PGPOW,
-  "justlinux v1.0 (penguinpowered)",
-  NULL,
-  PGPOW_update_entry,
-  PGPOW_check_info,
-  PGPOW_fields_used,
-  PGPOW_DEFAULT_SERVER,
-  PGPOW_DEFAULT_PORT,
-  PGPOW_REQUEST
-};
-
-int DHS_update_entry(void);
-int DHS_check_info(void);
-static char *DHS_fields_used[] = { "server", "user", "address", "wildcard", "mx", "url", "host", NULL };
-static struct service_t DHS_service = {
-  SERV_DHS,
-  "dhs",
-  NULL,
-  DHS_update_entry,
-  DHS_check_info,
-  DHS_fields_used,
-  DHS_DEFAULT_SERVER,
-  DHS_DEFAULT_PORT,
-  DHS_REQUEST
-};
-
+#if ( NETGEAR_PROJECT )
+void show_ddns_status(int flag);
+void send_syslog(int flag, char *hostname);
+#endif
 void DYNDNS_init(void);
 int DYNDNS_update_entry(void);
 int DYNDNS_check_info(void);
@@ -380,127 +332,84 @@ static struct service_t DYNDNS_STAT_service = {
   DYNDNS_STAT_REQUEST
 };
 
-int ODS_update_entry(void);
-int ODS_check_info(void);
-static char *ODS_fields_used[] = { "server", "host", "address", NULL };
-static struct service_t ODS_service = {
-  SERV_ODS,
-  "ods",
-  NULL,
-  ODS_update_entry,
-  ODS_check_info,
-  ODS_fields_used,
-  ODS_DEFAULT_SERVER,
-  ODS_DEFAULT_PORT,
-  ODS_REQUEST
+#ifdef QDNS
+static struct service_t QDNS_service = {
+  SERV_QDNS,
+  "qdns",
+  DYNDNS_init,
+  DYNDNS_update_entry,
+  DYNDNS_check_info,
+  DYNDNS_fields_used,
+  QDNS_DEFAULT_SERVER,
+  QDNS_DEFAULT_PORT,
+  QDNS_REQUEST
 };
 
-int TZO_update_entry(void);
-int TZO_check_info(void);
-static char *TZO_fields_used[] = { "server", "user", "address", "host", "connection-type", NULL };
-static struct service_t TZO_service = {
-  SERV_TZO,
-  "tzo",
-  NULL,
-  TZO_update_entry,
-  TZO_check_info,
-  TZO_fields_used,
-  TZO_DEFAULT_SERVER,
-  TZO_DEFAULT_PORT,
-  TZO_REQUEST
-};
-
-int EASYDNS_update_entry(void);
-int EASYDNS_check_info(void);
-static char *EASYDNS_fields_used[] = { "server", "user", "address", "wildcard", "mx", "host", NULL };
-static struct service_t EASYDNS_service = {
-  SERV_EASYDNS,
-  "easydns",
-  NULL,
-  EASYDNS_update_entry,
-  EASYDNS_check_info,
-  EASYDNS_fields_used,
-  EASYDNS_DEFAULT_SERVER,
-  EASYDNS_DEFAULT_PORT,
-  EASYDNS_REQUEST
-};
-
-#ifdef USE_MD5
-int GNUDIP_update_entry(void);
-int GNUDIP_check_info(void);
-static char *GNUDIP_fields_used[] = { "server", "user", "host", "address", NULL };
-static struct service_t GNUDIP_service = {
-  SERV_GNUDIP,
-  "gnudip",
-  NULL,
-  GNUDIP_update_entry,
-  GNUDIP_check_info,
-  GNUDIP_fields_used,
-  GNUDIP_DEFAULT_SERVER,
-  GNUDIP_DEFAULT_PORT,
-  GNUDIP_REQUEST
+static struct service_t QDNS_STAT_service = {
+  SERV_QDNS_STAT,
+  "qdns-static",
+  DYNDNS_init,
+  DYNDNS_update_entry,
+  DYNDNS_check_info,
+  DYNDNS_STAT_fields_used,
+  QDNS_DEFAULT_SERVER,
+  QDNS_DEFAULT_PORT,
+  QDNS_STAT_REQUEST
 };
 #endif
 
-int JUSTL_update_entry(void);
-int JUSTL_check_info(void);
-static char *JUSTL_fields_used[] = { "server", "user", "host", NULL };
-static struct service_t JUSTL_service = {
-  SERV_JUSTL,
-  "justlinux v2.0 (penguinpowered)",
-  NULL,
-  JUSTL_update_entry,
-  JUSTL_check_info,
-  JUSTL_fields_used,
-  JUSTL_DEFAULT_SERVER,
-  JUSTL_DEFAULT_PORT,
-  JUSTL_REQUEST
+#ifdef DTDNS
+int DTDNS_update_entry(void);  
+static struct service_t DTDNS_service = {
+  SERV_DTDNS,
+  "dtdns",
+  DYNDNS_init,
+  DTDNS_update_entry,
+  DYNDNS_check_info,
+  DYNDNS_fields_used,
+  DTDNS_DEFAULT_SERVER,
+  DTDNS_DEFAULT_PORT,
+  DTDNS_REQUEST
 };
 
-int DYNS_update_entry(void);
-int DYNS_check_info(void);
-static char *DYNS_fields_used[] = { "server", "user", "host", NULL };
-static struct service_t DYNS_service = {
-  SERV_DYNS,
-  "dyns",
-  NULL,
-  DYNS_update_entry,
-  DYNS_check_info,
-  DYNS_fields_used,
-  DYNS_DEFAULT_SERVER,
-  DYNS_DEFAULT_PORT,
-  DYNS_REQUEST
+static struct service_t DTDNS_STAT_service = {
+  SERV_DTDNS_STAT,
+  "dtdns-static",
+  DYNDNS_init,
+  DTDNS_update_entry,
+  DYNDNS_check_info,
+  DYNDNS_STAT_fields_used,
+  DTDNS_DEFAULT_SERVER,
+  DTDNS_DEFAULT_PORT,
+  DTDNS_STAT_REQUEST
+};
+#endif
+
+#ifdef HDNS
+static struct service_t HDNS_service = {
+  SERV_HDNS,
+  "hdns",
+  DYNDNS_init,
+  DYNDNS_update_entry,
+  DYNDNS_check_info,
+  DYNDNS_fields_used,
+  HDNS_DEFAULT_SERVER,
+  HDNS_DEFAULT_PORT,
+  HDNS_REQUEST
 };
 
-int HN_update_entry(void);
-int HN_check_info(void);
-static char *HN_fields_used[] = { "server", "user", "address", NULL };
-static struct service_t HN_service = {
-  SERV_HN,
-  "hn",
-  NULL,
-  HN_update_entry,
-  HN_check_info,
-  HN_fields_used,
-  HN_DEFAULT_SERVER,
-  HN_DEFAULT_PORT,
-  HN_REQUEST
+static struct service_t HDNS_STAT_service = {
+  SERV_HDNS_STAT,
+  "hdns-static",
+  DYNDNS_init,
+  DYNDNS_update_entry,
+  DYNDNS_check_info,
+  DYNDNS_STAT_fields_used,
+  HDNS_DEFAULT_SERVER,
+  HDNS_DEFAULT_PORT,
+  HDNS_STAT_REQUEST
 };
-
-int ZONEEDIT_update_entry(void);
-int ZONEEDIT_check_info(void);
-static char *ZONEEDIT_fields_used[] = { "server", "user", "address", "mx", "host", NULL };
-static struct service_t ZONEEDIT_service = {
-  SERV_ZONEEDIT,
-  "zoneedit",
-  NULL,
-  ZONEEDIT_update_entry,
-  ZONEEDIT_check_info,
-  ZONEEDIT_fields_used,
-  ZONEEDIT_DEFAULT_SERVER,
-  ZONEEDIT_DEFAULT_PORT,
-  ZONEEDIT_REQUEST
-};
+#endif
 
 static struct service_t *service = &DEF_SERVICE;
 
@@ -540,8 +449,64 @@ enum {
   CMD_notify_email,
   CMD_pid_file,
   CMD_offline,
+  CMD_user_agent,
   CMD__end
 };
+
+#if ( NETGEAR_PROJECT )
+void show_ddns_status(int flag)
+{
+	FILE *fp;
+
+	if(!(fp = fopen("/tmp/ez-ipupd.status", "w")))
+	{	
+		dprintf((stderr, "can not creat /tmp/ez-ipupd.status\n"));
+		return;
+	}
+	
+	fprintf(fp,"%d",flag);
+	fclose(fp);
+
+	switch(flag) { 
+#if 0
+		case 1: 
+			syslog(LOG_INFO, "[Dynamic DNS] host name %s registeration successful", host); 
+			break;
+#endif  
+		case 2: 
+			syslog(LOG_INFO, "[Dynamic DNS] host name %s registeration failure,", host);
+			break;; 
+#if 0
+		case 3: 
+			syslog(LOG_INFO, "[Dynamic DNS] Authentication failed. User Name/Password is not correct"); 
+			break; 
+#endif 
+			case 4: 
+				syslog(LOG_INFO, "[Dynamic DNS] host name %s registeration failure,", host); 
+				break; 
+#if 0 
+			case 5: 
+				syslog(LOG_INFO, "[Dynamic DNS] Update failed"); 
+				break; 
+#endif 
+	} 
+
+
+	if (flag == 1 || flag == 5)
+		system("date > /tmp/ez-ipupd.time");
+}
+
+void send_syslog(int flag, char *hostname)
+{
+
+	if(flag == 1)
+		syslog( 6, "[Dynamic DNS] host name %s registeration successful,", hostname);
+	else	
+		syslog( 6, "[Dynamic DNS] host name %s registeration failure,", hostname);
+	return;
+								 
+}
+#endif
 
 int conf_handler(struct conf_cmd *cmd, char *arg);
 static struct conf_cmd conf_commands[] = {
@@ -554,6 +519,8 @@ static struct conf_cmd conf_commands[] = {
   { CMD_foreground,      "foreground",      CONF_NO_ARG,   1, conf_handler, "%s" },
   { CMD_pid_file,        "pid-file",        CONF_NEED_ARG, 1, conf_handler, "%s=<file>" },
   { CMD_host,            "host",            CONF_NEED_ARG, 1, conf_handler, "%s=<host>" },
+  { CMD_user_agent,            "user-agent",            CONF_NEED_ARG, 1, conf_handler, "%s=<User-Agent>" },
+
   { CMD_interface,       "interface",       CONF_NEED_ARG, 1, conf_handler, "%s=<interface>" },
   { CMD_mx,              "mx",              CONF_NEED_ARG, 1, conf_handler, "%s=<mail exchanger>" },
   { CMD_max_interval,    "max-interval",    CONF_NEED_ARG, 1, conf_handler, "%s=<number of seconds between updates>" },
@@ -848,6 +815,14 @@ int option_handler(int id, char *optarg)
 #endif
       break;
 
+    case CMD_user_agent:
+      if(user_agent) { free(user_agent);}
+      user_agent = strdup(optarg);
+#ifdef DEBUG
+      dprintf((stderr, "User-agent: %s\n", user_agent));
+#endif
+      break;
+
     case CMD_foreground:
       options |= OPT_FOREGROUND;
       dprintf((stderr, "fork()ing off\n"));
@@ -955,20 +930,7 @@ int option_handler(int id, char *optarg)
       break;
 
     case CMD_service_type:
-      if(strcmp("ezip", optarg) == 0 || strcmp("ez-ip", optarg) == 0)
-      {
-        service = &EZIP_service;
-      }
-      else if(strcmp("pgpow", optarg) == 0 || 
-          strcmp("penguinpowered", optarg) == 0)
-      {
-        service = &PGPOW_service;
-      }
-      else if(strcmp("dhs", optarg) == 0)
-      {
-        service = &DHS_service;
-      }
-      else if(strcmp("dyndns", optarg) == 0)
+      if(strcmp("dyndns", optarg) == 0)
       {
         service = &DYNDNS_service;
       }
@@ -978,40 +940,39 @@ int option_handler(int id, char *optarg)
       {
         service = &DYNDNS_STAT_service;
       }
-      else if(strcmp("ods", optarg) == 0)
+#ifdef QDNS
+	else if(strcmp("qdns", optarg) == 0)
       {
-        service = &ODS_service;
+        service = &QDNS_service;
       }
-      else if(strcmp("tzo", optarg) == 0)
+      else if(strcmp("qdns-stat", optarg) == 0 ||
+          strcmp("qdns-static", optarg) == 0)
       {
-        service = &TZO_service;
-      }
-      else if(strcmp("easydns", optarg) == 0)
-      {
-        service = &EASYDNS_service;
-      }
-#ifdef USE_MD5
-      else if(strcmp("gnudip", optarg) == 0)
-      {
-        service = &GNUDIP_service;
+        service = &QDNS_STAT_service;
       }
 #endif
-      else if(strcmp("justlinux", optarg) == 0)
+#ifdef DTDNS
+			else if(strcmp("dtdns", optarg) == 0)
       {
-        service = &JUSTL_service;
+        service = &DTDNS_service;
       }
-      else if(strcmp("dyns", optarg) == 0)
+      else if(strcmp("dtdns-stat", optarg) == 0 ||
+          strcmp("dtdns-static", optarg) == 0)
       {
-        service = &DYNS_service;
+        service = &DTDNS_STAT_service;
       }
-      else if(strcmp("hn", optarg) == 0)
+#endif
+#ifdef HDNS
+	else if(strcmp("hdns", optarg) == 0)
       {
-        service = &HN_service;
+        service = &HDNS_service;
       }
-      else if(strcmp("zoneedit", optarg) == 0)
+      else if(strcmp("hdns-stat", optarg) == 0 ||
+          strcmp("hdns-static", optarg) == 0)
       {
-        service = &ZONEEDIT_service;
+        service = &HDNS_STAT_service;
       }
+#endif
       else
       {
         fprintf(stderr, "unknown service type: %s\n", optarg);
@@ -1324,8 +1285,10 @@ int do_connect(int *sock, char *host, char *port)
   struct sockaddr_in address;
   int len;
   int result;
+  int flags ;
   struct hostent *hostinfo;
-  struct servent *servinfo;
+  struct timeval tv;
+  fd_set rdevents, wrevents, exevents;
 
   // set up the socket
   if((*sock=socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -1350,21 +1313,23 @@ int do_connect(int *sock, char *host, char *port)
     return(-1);
   }
   address.sin_addr = *(struct in_addr *)*hostinfo -> h_addr_list;
-
-  // get the host port
-  servinfo = getservbyname(port, "tcp");
-  if(servinfo)
-  {
-    address.sin_port = servinfo -> s_port;
-  }
-  else
-  {
-    address.sin_port = htons(atoi(port));
-  }
-
+  address.sin_port = htons(atoi(port));
+  
+  // get the socket's flag
+  if(( flags = fcntl(*sock, F_GETFL, 0)) < 0 )
+   {
+	perror("get socket flags");	
+   	return -1;
+   }
+  
+  //set socket to non-blocking
+  if(fcntl(*sock, F_SETFL, flags | O_NONBLOCK) < 0) {
+	perror("set socket to non-blocking");
+	return -1;
+   }
   // connect the socket
   len = sizeof(address);
-  if((result=connect(*sock, (struct sockaddr *)&address, len)) == -1) 
+  if((result = connect(*sock, (struct sockaddr *)&address, len)) && errno != EINPROGRESS) 
   {
     if(!(options & OPT_QUIET))
     {
@@ -1375,16 +1340,62 @@ int do_connect(int *sock, char *host, char *port)
   }
 
   // print out some info
-  if(!(options & OPT_QUIET))
-  {
-    fprintf(stderr,
-        "connected to %s (%s) on port %d.\n",
-        host,
-        inet_ntoa(address.sin_addr),
-        ntohs(address.sin_port));
-  }
+  if(result == 0) {
+	if(fcntl(*sock, F_SETFL, flags) < 0 ){
+		fprintf(stderr, "can not reset socket to block state\n");
+		return -1;
+	}
+	if(!(options & OPT_QUIET))
+  	{
+    		fprintf(stderr,"connected to %s (%s) on port %d.\n",
+			host,inet_ntoa(address.sin_addr),ntohs(address.sin_port));
+  	}
+  	return 0;
+   }
+  
+   FD_ZERO(&rdevents);
+   FD_SET(*sock, &rdevents);
+   wrevents = rdevents;
+   exevents = rdevents;
+	
+   tv.tv_sec = 30;
+   tv.tv_usec = 0;
+   
+   result = select(*sock + 1, &rdevents, &wrevents, &exevents, &tv);
+   
+   if( result < 0 ) {
+   	perror("select");
+	return -1; 
+   }
+   else if( result == 0) {
+   	perror("timeout");
+	return 1;
+   }
+   else {
+	int err = 0, len = 1;
 
-  return 0;
+   	if (!FD_ISSET(*sock, &rdevents) && !FD_ISSET(*sock, &wrevents)) {
+		perror("connect error");
+		return -1;
+	}
+	
+	if( getsockopt(*sock, SOL_SOCKET, SO_ERROR, &err, &len )) {
+		perror("getsockopt");
+		return -1;
+	}
+        if(err != 0) {
+		perror("connect select error");	
+		return -1;
+	}
+	
+	if(fcntl(*sock, F_SETFL, flags) < 0) {
+		perror("set socket to blocking");
+		return -1;
+	}
+	fprintf(stderr,"connected to %s (%s) on port %d.\n",
+                        host,inet_ntoa(address.sin_addr),ntohs(address.sin_port));
+	return 0;
+   }
 }
 
 static char table64[]=
@@ -1438,15 +1449,15 @@ void base64Encode(char *intext, char *output)
 }
 
 #if IF_LOOKUP 
-#  if !defined(HAVE_INET_ATON) 
-#    if defined(HAVE_INET_ADDR)
+#if !defined(HAVE_INET_ATON) 
+#if defined(HAVE_INET_ADDR)
 int inet_aton(const char *cp, struct in_addr *inp)
 {
   (*inp).s_addr = inet_addr(cp);
 }
-#  else
-#    error "sorry, can't compile with IF_LOOKUP and no inet_aton"
-#  endif
+#else
+	#error "sorry, can't compile with IF_LOOKUP and no inet_aton"
+#endif
 #endif
 #endif
 
@@ -1507,7 +1518,12 @@ int read_input(void *buf, int len)
   max_fd = client_sockfd;
   memcpy(&tv, &timeout, sizeof(struct timeval));
 
-  ret = select(max_fd + 1, &readfds, NULL, NULL, &tv);
+#ifdef DTDNS
+	if(strcmp(server,"www.dtdns.com")==0)
+		ret = select(max_fd + 2, &readfds, NULL, NULL, &tv);
+	else
+#endif
+  	ret = select(max_fd + 1, &readfds, NULL, NULL, &tv);
   dprintf((stderr, "ret: %d\n", ret));
 
   if(ret == -1)
@@ -1562,9 +1578,14 @@ int get_if_addr(int sock, char *name, struct sockaddr_in *sin)
 
   if(ifr.ifr_addr.sa_family == AF_INET)
   {
-    memcpy(sin, &(ifr.ifr_addr), sizeof(struct sockaddr_in));
-    dprintf((stderr, "%s: %s\n", name, inet_ntoa(sin->sin_addr)));
-    return 0;
+	memcpy(sin, &(ifr.ifr_addr), sizeof(struct sockaddr_in));
+
+   	if ( (strcmp(name, "ppp0") == 0) && (strcmp(inet_ntoa(sin->sin_addr),"10.64.64.64") == 0) ){
+		dprintf((stderr, "%s: %s\n", name, "can not get ip address!"));
+		return -1;
+	}
+    	dprintf((stderr, "%s: %s\n", name, inet_ntoa(sin->sin_addr)));
+    	return 0;
   }
   else
   {
@@ -1576,47 +1597,6 @@ int get_if_addr(int sock, char *name, struct sockaddr_in *sin)
 #else
   return -1;
 #endif
-}
-
-static int PGPOW_read_response(char *buf)
-{
-  int bytes; 
-
-  bytes = read_input(buf, BUFFER_SIZE);
-  if(bytes < 1)
-  {
-    close(client_sockfd);
-    return(-1);
-  }
-  buf[bytes] = '\0';
-
-  dprintf((stderr, "server says: %s\n", buf));
-  
-  if(strncmp("OK", buf, 2) != 0)
-  {
-    return(1);
-  }
-  else
-  {
-    return(0);
-  }
-}
-
-static int ODS_read_response(char *buf)
-{
-  int bytes; 
-
-  bytes = read_input(buf, BUFFER_SIZE);
-  if(bytes < 1)
-  {
-    close(client_sockfd);
-    return(-1);
-  }
-  buf[bytes] = '\0';
-
-  dprintf((stderr, "server says: %s\n", buf));
-  
-  return(atoi(buf));
 }
 
 int NULL_check_info(void)
@@ -1637,119 +1617,6 @@ int NULL_check_info(void)
   option_handler(CMD_service_type, buf);
 
   return(0);
-}
-
-int EZIP_check_info(void)
-{
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int EZIP_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?mode=update&", request);
-  output(buf);
-  if(address)
-  {
-    snprintf(buf, BUFFER_SIZE, "%s=%s&", "ipaddress", address);
-    output(buf);
-  }
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "wildcard", wildcard ? "yes" : "no");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "mx", mx);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "url", url);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "host", host);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 200:
-      if(!(options & OPT_QUIET))
-      {
-        printf("request successful\n");
-      }
-      break;
-
-    case 401:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      return(UPDATERES_SHUTDOWN);
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        fprintf(stderr, "server response: %s\n", auth);
-      }
-      return(UPDATERES_ERROR);
-      break;
-  }
-
-  return(UPDATERES_OK);
 }
 
 void DYNDNS_init(void)
@@ -1808,6 +1675,123 @@ int DYNDNS_check_info(void)
   return 0;
 }
 
+#ifdef DTDNS
+int DTDNS_update_entry(void)  
+ {     
+  char buf[BUFFER_SIZE+1];
+  char *bp = buf;
+  char *pch;
+  int bytes;
+  int btot;
+  int ret;
+  int retval = UPDATERES_OK;
+  int len;
+
+  buf[BUFFER_SIZE] = '\0';
+
+#if(NETGEAR_PROJECT)
+	  show_ddns_status(5);
+#endif  
+       
+     if( (ret = do_connect((int*)&client_sockfd, server, port)) != 0)
+	   {
+	   		if(!(options & OPT_QUIET))
+	    	{
+	      	show_message("error connecting to %s:%s\n", server, port);
+	    	}
+	    	if(ret == 1)
+					return (UPDATERES_TIMEOUT) ;
+	    	return(UPDATERES_ERROR);
+	  }  
+     len = sprintf(buf,"GET %sid=%s&pw=%s&ip=%s HTTP/1.0\r\n"  
+                 "Host: www.dtdns.com\r\n"  
+                 "User-Agent: %s\r\n"  
+                 "\r\n"  
+                 "Connection: Keep-Alive",   
+                 request,  
+                 host,  
+                 password,  
+                 address,  
+                 ROUTER_NAME);     
+           
+     bp += len;  
+       
+     *bp = '\0';  
+     output(buf);             
+       
+     bp = buf;  
+     bytes = 0;  
+     btot = 0;         
+     
+     while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
+		  {
+		    bp += bytes;
+		    btot += bytes;
+		    dprintf((stderr, "btot: %d\n", btot));
+		  }
+		  close(client_sockfd);
+		  buf[btot] = '\0';
+     
+     if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)  
+     {  
+         ret = -1;  
+     }     
+       
+     switch(ret)  
+     {  
+     case -1:  
+         if(!(options & OPT_QUIET))
+		     {
+		       show_message("strange server response, are you connecting to the right server?\n");
+		     }
+		     retval = UPDATERES_ERROR;
+		     break;
+     case 200:  
+	     	if(strstr(buf, "password") != NULL)
+        {
+        	show_message("authentication failure\n");
+				#if(NETGEAR_PROJECT)
+					show_ddns_status(3);
+				#endif
+				  retval = UPDATERES_SHUTDOWN;
+        }
+        else if(strstr(buf, "hostname") != NULL) 
+        {
+        	show_message("invalid hostname: %s\n", host);
+        #if(NETGEAR_PROJECT)
+					show_ddns_status(4);
+				#endif
+          retval = UPDATERES_SHUTDOWN;
+        }
+        else if(strstr(buf, "points") != NULL) 
+        {
+         retval = UPDATERES_OK;
+        }  
+        else
+        {
+        	show_message("error processing request\n");
+          retval = UPDATERES_ERROR;
+        }
+        break;  
+     case 401:         
+         show_message("authentication failure\n");
+#if(NETGEAR_PROJECT)
+				 show_ddns_status(3);
+#endif
+			   retval = UPDATERES_SHUTDOWN;
+	  		 break; 
+     default:  
+#if(NETGEAR_PROJECT)
+	       show_ddns_status(5);
+#endif
+         retval = UPDATERES_ERROR;  
+         break;  
+     }      
+     free(buf); 
+     return retval;  
+ }  
+#endif
+
 int DYNDNS_update_entry(void)
 {
   char buf[BUFFER_SIZE+1];
@@ -1815,59 +1799,67 @@ int DYNDNS_update_entry(void)
   int bytes;
   int btot;
   int ret;
+  int len;
   int retval = UPDATERES_OK;
 
   buf[BUFFER_SIZE] = '\0';
 
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
+#if(NETGEAR_PROJECT)
+	  show_ddns_status(5);
+#endif  
+  if( (ret = do_connect((int*)&client_sockfd, server, port)) != 0)
   {
     if(!(options & OPT_QUIET))
     {
       show_message("error connecting to %s:%s\n", server, port);
     }
+    if(ret == 1)
+	return (UPDATERES_TIMEOUT) ;
     return(UPDATERES_ERROR);
   }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?", request);
-  output(buf);
-  if(service->type == SERV_DYNDNS_STAT)
-  {
-    snprintf(buf, BUFFER_SIZE, "%s=%s&", "system", "statdns");
-    output(buf);
-  }
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "hostname", host);
-  output(buf);
-  if(address != NULL)
-  {
-    snprintf(buf, BUFFER_SIZE, "%s=%s&", "myip", address);
-    output(buf);
-  }
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "wildcard", wildcard ? "ON" : "OFF");
-  output(buf);
-  if(mx != NULL && *mx != '\0')
-  {
-    snprintf(buf, BUFFER_SIZE, "%s=%s&", "mx", mx);
-    output(buf);
-  }
-  //snprintf(buf, BUFFER_SIZE, "%s=%s&", "backmx", "NO");
-  //output(buf);
-  if(options & OPT_OFFLINE)
-  {
-    snprintf(buf, BUFFER_SIZE, "%s=%s&", "offline", "yes");
-    output(buf);
-  }
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
+	
+	snprintf(buf, BUFFER_SIZE, "GET %s?", request);
+	output(buf);
+	if(service->type == SERV_DYNDNS_STAT)
+	{
+	  snprintf(buf, BUFFER_SIZE, "%s=%s&", "system", "statdns");
+	  output(buf);
+	}
+	snprintf(buf, BUFFER_SIZE, "%s=%s&", "hostname", host);
+	output(buf);
+	if(address != NULL)
+	{
+	  //snprintf(buf, BUFFER_SIZE, "%s=%s&", "myip", address);
+	  snprintf(buf, BUFFER_SIZE, "%s=&", "myip");
+	  output(buf);
+	}
+	snprintf(buf, BUFFER_SIZE, "%s=%s&", "wildcard", wildcard ? "ON" : "OFF");
+	output(buf);
+	if(mx != NULL && *mx != '\0')
+	{
+	  snprintf(buf, BUFFER_SIZE, "%s=%s&", "mx", mx);
+	  output(buf);
+	}
+	//snprintf(buf, BUFFER_SIZE, "%s=%s&", "backmx", "NO");
+	//output(buf);
+	if(options & OPT_OFFLINE)
+	{
+	  snprintf(buf, BUFFER_SIZE, "%s=%s&", "offline", "yes");
+	  output(buf);
+	}
+	snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
+	output(buf);
+	snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
+	output(buf);
+	/*snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
+	    "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");*/
+	snprintf(buf, BUFFER_SIZE, "User-Agent: %s\015\012", user_agent);
+	output(buf);
+	snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
+	output(buf);
+	snprintf(buf, BUFFER_SIZE, "\015\012");
+	output(buf);
+	  
   bp = buf;
   bytes = 0;
   btot = 0;
@@ -1898,7 +1890,7 @@ int DYNDNS_update_entry(void)
       break;
 
     case 200:
-      if(strstr(buf, "\ngood ") != NULL)
+      if(strstr(buf, "\ngood") != NULL)
       {
         if(!(options & OPT_QUIET))
         {
@@ -1907,6 +1899,9 @@ int DYNDNS_update_entry(void)
       }
       else
       {
+	#if(NETGEAR_PROJECT)
+		show_ddns_status(4);
+	#endif
         if(strstr(buf, "\nnohost") != NULL)
         {
           show_message("invalid hostname: %s\n", host);
@@ -1941,7 +1936,10 @@ int DYNDNS_update_entry(void)
         else if(strstr(buf, "\nbadauth") != NULL)
         {
           show_message("authentication failure\n");
-          retval = UPDATERES_SHUTDOWN;
+	#if(NETGEAR_PROJECT)
+		show_ddns_status(3);
+	#endif
+	  retval = UPDATERES_SHUTDOWN;
         }
         else if(strstr(buf, "\nbadsys") != NULL)
         {
@@ -1984,6 +1982,9 @@ int DYNDNS_update_entry(void)
         // with as it is so short
         else if(strstr(buf, "\nw") != NULL)
         {
+	#if(NETGEAR_PROJECT)
+	          show_ddns_status(5);
+	#endif
           int howlong = 0;
           char *p = strstr(buf, "\nw");
           char reason[256];
@@ -2018,7 +2019,10 @@ int DYNDNS_update_entry(void)
         }
         else
         {
-          show_message("error processing request\n");
+	#if(NETGEAR_PROJECT)
+		show_ddns_status(5);
+	#endif	
+	show_message("error processing request\n");
           if(!(options & OPT_QUIET))
           {
             fprintf(stderr, "==== server output: ====\n%s\n", buf);
@@ -2029,1825 +2033,39 @@ int DYNDNS_update_entry(void)
       break;
 
     case 401:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      retval = UPDATERES_SHUTDOWN;
-      break;
 
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        fprintf(stderr, "server response: %s\n", auth);
-      }
-      retval = UPDATERES_ERROR;
-      break;
-  }
-
-  return(retval);
-}
-
-int PGPOW_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if((host == NULL) || (*host == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(host) { free(host); }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    host = strdup(buf);
-    chomp(host);
-  }
-
-  if(interface == NULL && address == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      fprintf(stderr, "you must provide either an interface or an address\n");
-      return(-1);
-    }
-    if(interface) { free(interface); }
-    printf("interface: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    option_handler(CMD_interface, buf);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int PGPOW_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  /* read server message */
-  if(PGPOW_read_response(buf) != 0)
-  {
-    show_message("strange server response, are you connecting to the right server?\n");
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  /* send version command */
-  snprintf(buf, BUFFER_SIZE, "VER %s [%s-%s %s (%s)]\015\012", PGPOW_VERSION,
-      "ez-update", VERSION, OS, "by Angus Mackay");
-  output(buf);
-
-  if(PGPOW_read_response(buf) != 0)
-  {
-    if(strncmp("ERR", buf, 3) == 0)
-    {
-      show_message("error talking to server: %s\n", &(buf[3]));
-    }
-    else
-    {
-      show_message("error talking to server:\n\t%s\n", buf);
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  /* send user command */
-  snprintf(buf, BUFFER_SIZE, "USER %s\015\012", user_name);
-  output(buf);
-
-  if(PGPOW_read_response(buf) != 0)
-  {
-    if(strncmp("ERR", buf, 3) == 0)
-    {
-      show_message("error talking to server: %s\n", &(buf[3]));
-    }
-    else
-    {
-      show_message("error talking to server:\n\t%s\n", buf);
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  /* send pass command */
-  snprintf(buf, BUFFER_SIZE, "PASS %s\015\012", password);
-  output(buf);
-
-  if(PGPOW_read_response(buf) != 0)
-  {
-    if(strncmp("ERR", buf, 3) == 0)
-    {
-      show_message("error talking to server: %s\n", &(buf[3]));
-    }
-    else
-    {
-      show_message("error talking to server:\n\t%s\n", buf);
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  /* send host command */
-  snprintf(buf, BUFFER_SIZE, "HOST %s\015\012", host);
-  output(buf);
-
-  if(PGPOW_read_response(buf) != 0)
-  {
-    if(strncmp("ERR", buf, 3) == 0)
-    {
-      show_message("error talking to server: %s\n", &(buf[3]));
-    }
-    else
-    {
-      show_message("error talking to server:\n\t%s\n", buf);
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  /* send oper command */
-  snprintf(buf, BUFFER_SIZE, "OPER %s\015\012", request);
-  output(buf);
-
-  if(PGPOW_read_response(buf) != 0)
-  {
-    if(strncmp("ERR", buf, 3) == 0)
-    {
-      show_message("error talking to server: %s\n", &(buf[3]));
-    }
-    else
-    {
-      show_message("error talking to server:\n\t%s\n", buf);
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  if(strcmp("update", request) == 0)
-  {
-    /* send ip command */
-    snprintf(buf, BUFFER_SIZE, "IP %s\015\012", address);
-    output(buf);
-
-    if(PGPOW_read_response(buf) != 0)
-    {
-      if(strncmp("ERR", buf, 3) == 0)
-      {
-        show_message("error talking to server: %s\n", &(buf[3]));
-      }
-      else
-      {
-        show_message("error talking to server:\n\t%s\n", buf);
-      }
-      close(client_sockfd);
-      return(UPDATERES_ERROR);
-    }
-  }
-
-  /* send done command */
-  snprintf(buf, BUFFER_SIZE, "DONE\015\012");
-  output(buf);
-
-  if(PGPOW_read_response(buf) != 0)
-  {
-    if(strncmp("ERR", buf, 3) == 0)
-    {
-      show_message("error talking to server: %s\n", &(buf[3]));
-    }
-    else
-    {
-      show_message("error talking to server:\n\t%s\n", buf);
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  if(!(options & OPT_QUIET))
-  {
-    printf("request successful\n");
-  }
-
-  close(client_sockfd);
-  return(UPDATERES_OK);
-}
-
-int DHS_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if((host == NULL) || (*host == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(host) { free(host); }
-    printf("host: ");
-    fgets(buf, BUFSIZ, stdin);
-    host = strdup(buf);
-    chomp(host);
-  }
-
-  if(interface == NULL && address == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      fprintf(stderr, "you must provide either an interface or an address\n");
-      return(-1);
-    }
-    if(interface) { free(interface); }
-    printf("interface: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    option_handler(CMD_interface, buf);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-/*
- * grrrrr, it seems that dhs.org requires us to use POST
- * also DHS doesn't update both the mx record and the address at the same
- * time, this service really stinks. go with justlinix.com (penguinpowered)
- * instead, the only advantage is short host names.
- */
-int DHS_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char putbuf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-  char *domain = NULL;
-  char *hostname = NULL;
-  char *p;
-  int limit;
-  int retval = UPDATERES_OK;
-
-  buf[BUFFER_SIZE] = '\0';
-  putbuf[BUFFER_SIZE] = '\0';
-
-  /* parse apart the domain and hostname */
-  hostname = strdup(host);
-  if((p=strchr(hostname, '.')) == NULL)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error parsing hostname from host %s\n", host);
-    }
-    return(UPDATERES_ERROR);
-  }
-  *p = '\0';
-  p++;
-  if(*p == '\0')
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error parsing domain from host %s\n", host);
-    }
-    return(UPDATERES_ERROR);
-  }
-  domain = strdup(p);
-
-  dprintf((stderr, "hostname: %s, domain: %s\n", hostname, domain));
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "POST %s HTTP/1.0\015\012", request);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-
-  p = putbuf;
-  *p = '\0';
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  snprintf(p, limit, "hostscmd=edit&hostscmdstage=2&type=4&");
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  snprintf(p, limit, "%s=%s&", "updatetype", "Online");
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  snprintf(p, limit, "%s=%s&", "ip", address);
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  snprintf(p, limit, "%s=%s&", "mx", mx);
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  snprintf(p, limit, "%s=%s&", "offline_url", url);
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  if(cloak_title)
-  {
-    snprintf(p, limit, "%s=%s&", "cloak", "Y");
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "%s=%s&", "cloak_title", cloak_title);
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-  }
-  else
-  {
-    snprintf(p, limit, "%s=%s&", "cloak_title", "");
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-  }
-  snprintf(p, limit, "%s=%s&", "submit", "Update");
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  snprintf(p, limit, "%s=%s&", "domain", domain);
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-  snprintf(p, limit, "%s=%s", "hostname", hostname);
-  p += strlen(p);
-  limit = BUFFER_SIZE - 1 - strlen(buf);
-
-  snprintf(buf, BUFFER_SIZE, "Content-length: %d\015\012", strlen(putbuf));
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  output(putbuf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      retval = UPDATERES_ERROR;
-      break;
-
-    case 200:
-      if(!(options & OPT_QUIET))
-      {
-        printf("request successful\n");
-      }
-      break;
-
-    case 401:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      retval = UPDATERES_SHUTDOWN;
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        show_message("server response: %s\n", auth);
-      }
-      retval = UPDATERES_ERROR;
-      break;
-  }
-
-  // this stupid service requires us to do seperate request if we want to 
-  // update the mail exchanger (mx). grrrrrr
-  if(*mx != '\0')
-  {
-    // okay, dhs's service is incredibly stupid and will not work with two
-    // requests right after each other. I could care less that this is ugly,
-    // I personally will NEVER use dhs, it is laughable.
-    sleep(DHS_SUCKY_TIMEOUT < timeout.tv_sec ? DHS_SUCKY_TIMEOUT : timeout.tv_sec);
-
-    if(do_connect((int*)&client_sockfd, server, port) != 0)
-    {
-      if(!(options & OPT_QUIET))
-      {
-        show_message("error connecting to %s:%s\n", server, port);
-      }
-      return(UPDATERES_ERROR);
-    }
-
-    snprintf(buf, BUFFER_SIZE, "POST %s HTTP/1.0\015\012", request);
-    output(buf);
-    snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-    output(buf);
-    snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-        "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-    output(buf);
-    snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-    output(buf);
-
-    p = putbuf;
-    *p = '\0';
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "hostscmd=edit&hostscmdstage=2&type=4&");
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "%s=%s&", "updatetype", "Update+Mail+Exchanger");
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "%s=%s&", "ip", address);
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "%s=%s&", "mx", mx);
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "%s=%s&", "offline_url", url);
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    if(cloak_title)
-    {
-      snprintf(p, limit, "%s=%s&", "cloak", "Y");
-      p += strlen(p);
-      limit = BUFFER_SIZE - 1 - strlen(buf);
-      snprintf(p, limit, "%s=%s&", "cloak_title", cloak_title);
-      p += strlen(p);
-      limit = BUFFER_SIZE - 1 - strlen(buf);
-    }
-    else
-    {
-      snprintf(p, limit, "%s=%s&", "cloak_title", "");
-      p += strlen(p);
-      limit = BUFFER_SIZE - 1 - strlen(buf);
-    }
-    snprintf(p, limit, "%s=%s&", "submit", "Update");
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "%s=%s&", "domain", domain);
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-    snprintf(p, limit, "%s=%s", "hostname", hostname);
-    p += strlen(p);
-    limit = BUFFER_SIZE - 1 - strlen(buf);
-
-    snprintf(buf, BUFFER_SIZE, "Content-length: %d\015\012", strlen(putbuf));
-    output(buf);
-    snprintf(buf, BUFFER_SIZE, "\015\012");
-    output(buf);
-
-    output(putbuf);
-    snprintf(buf, BUFFER_SIZE, "\015\012");
-    output(buf);
-
-    bp = buf;
-    bytes = 0;
-    btot = 0;
-    while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-    {
-      bp += bytes;
-      btot += bytes;
-      dprintf((stderr, "btot: %d\n", btot));
-    }
-    close(client_sockfd);
-    buf[btot] = '\0';
-
-    dprintf((stderr, "server output: %s\n", buf));
-
-    if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-    {
-      ret = -1;
-    }
-
-    switch(ret)
-    {
-      case -1:
-        if(!(options & OPT_QUIET))
-        {
-          show_message("strange server response, are you connecting to the right server?\n");
-        }
-        retval = UPDATERES_ERROR;
-        break;
-
-      case 200:
-        if(!(options & OPT_QUIET))
-        {
-          printf("request successful\n");
-        }
-        break;
-
-      case 401:
-        if(!(options & OPT_QUIET))
-        {
-          show_message("authentication failure\n");
-        }
-        retval = UPDATERES_SHUTDOWN;
-        break;
-
-      default:
-        if(!(options & OPT_QUIET))
-        {
-          // reuse the auth buffer
-          *auth = '\0';
-          sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-          show_message("unknown return code: %d\n", ret);
-          show_message("server response: %s\n", auth);
-        }
-        retval = UPDATERES_ERROR;
-        break;
-    }
-  }
-
-  return(retval);
-}
-
-int ODS_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if((host == NULL) || (*host == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(host) { free(host); }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    host = strdup(buf);
-    chomp(host);
-  }
-
-  if(interface == NULL && address == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      fprintf(stderr, "you must provide either an interface or an address\n");
-      return(-1);
-    }
-    if(interface) { free(interface); }
-    printf("interface: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    option_handler(CMD_interface, buf);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int ODS_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  int response;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  /* read server message */
-  if(ODS_read_response(buf) != 100)
-  {
-    show_message("strange server response, are you connecting to the right server?\n");
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  /* send login command */
-  snprintf(buf, BUFFER_SIZE, "LOGIN %s %s\012", user_name, password);
-  output(buf);
-
-  response = ODS_read_response(buf);
-  if(!(response == 225 || response == 226))
-  {
-    if(strlen(buf) > 4)
-    {
-      show_message("error talking to server: %s\n", &(buf[4]));
-    }
-    else
-    {
-      show_message("error talking to server\n");
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  /* send delete command */
-  snprintf(buf, BUFFER_SIZE, "DELRR %s A\012", host);
-  output(buf);
-
-  if(ODS_read_response(buf) != 0)
-  {
-    // what is the correct response to a DELRR?
-  }
-
-  /* send address command */
-  snprintf(buf, BUFFER_SIZE, "ADDRR %s A %s\012", host, address);
-  output(buf);
-
-  response = ODS_read_response(buf);
-  if(!(response == 795 || response == 796))
-  {
-    if(strlen(buf) > 4)
-    {
-      show_message("error talking to server: %s\n", &(buf[4]));
-    }
-    else
-    {
-      show_message("error talking to server\n");
-    }
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-
-  if(!(options & OPT_QUIET))
-  {
-    printf("request successful\n");
-  }
-
-  close(client_sockfd);
-  return(UPDATERES_OK);
-}
-
-int TZO_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if((host == NULL) || (*host == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(host) { free(host); }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    host = strdup(buf);
-    chomp(host);
-  }
-
-  if(interface == NULL && address == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      fprintf(stderr, "you must provide either an interface or an address\n");
-      return(-1);
-    }
-    if(interface) { free(interface); }
-    printf("interface: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    option_handler(CMD_interface, buf);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int TZO_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?", request);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "TZOName", host);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "Email", user_name);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "TZOKey", password);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "IPAddress", address);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 200:
-      if(!(options & OPT_QUIET))
-      {
-        printf("request successful\n");
-      }
-      break;
-
-    case 302:
-      // There is no neat way to determine the exact error other than to
-      // parse the Location part of the mime header to find where we're
-      // being redirected.
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        bp = strstr(buf, "Location: ");
-        if((bp < strstr(buf, "\r\n\r\n")) && (sscanf(bp, "Location: http://%*[^/]%255[^\r\n]", auth) == 1))
-        {
-          bp = strrchr(auth, '/') + 1;
-        }
-        else
-        {
-          bp = "";
-        }
-        dprintf((stderr, "location: %s\n", bp));
-
-        if(!(strncmp(bp, "domainmismatch.htm", strlen(bp)) && strncmp(bp, "invname.htm", strlen(bp))))
-        {
-          show_message("invalid host name\n");
-        }
-        else if(!strncmp(bp, "invkey.htm", strlen(bp)))
-        {
-          show_message("invalid password(tzo key)\n");
-        }
-        else if(!(strncmp(bp, "emailmismatch.htm", strlen(bp)) && strncmp(bp, "invemail.htm", strlen(bp))))
-        {
-          show_message("invalid user name(email address)\n");
-        }
-        else
-        {
-          show_message("unknown error\n");
-        }
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        show_message("server response: %s\n", auth);
-      }
-      return(UPDATERES_ERROR);
-      break;
-  }
-
-  return(UPDATERES_OK);
-}
-
-int EASYDNS_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if((host == NULL) || (*host == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(host) { free(host); }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    host = strdup(buf);
-    chomp(host);
-  }
-
-  if(interface == NULL && address == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      fprintf(stderr, "you must provide either an interface or an address\n");
-      return(-1);
-    }
-    if(interface) { free(interface); }
-    printf("interface: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    option_handler(CMD_interface, buf);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int EASYDNS_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?action=edit&", request);
-  output(buf);
-  if(address != NULL && *address != '\0')
-  {
-    snprintf(buf, BUFFER_SIZE, "%s=%s&", "myip", address);
-    output(buf);
-  }
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "wildcard", wildcard ? "ON" : "OFF");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "mx", mx);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "backmx", *mx == '\0' ? "NO" : "YES");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "host_id", host);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 200:
-      if(strstr(buf, "NOERROR\n") != NULL)
-      {
-        if(!(options & OPT_QUIET))
-        {
-          printf("request successful\n");
-        }
-      }
-      else
-      {
-        show_message("error processing request\n");
-        if(!(options & OPT_QUIET))
-        {
-          fprintf(stderr, "server output: %s\n", buf);
-        }
-        return(UPDATERES_ERROR);
-      }
-      break;
-
-    case 401:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      return(UPDATERES_SHUTDOWN);
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        show_message("server response: %s\n", auth);
-      }
-      return(UPDATERES_ERROR);
-      break;
-  }
-
-  return(UPDATERES_OK);
-}
-
-#ifdef USE_MD5
-int GNUDIP_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if((server == NULL) || (*server == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(server) { free(server); }
-    printf("server: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    server = strdup(buf);
-    chomp(server);
-  }
-
-  if((host == NULL) || (*host == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(host) { free(host); }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    host = strdup(buf);
-    chomp(host);
-  }
-
-  if((address) && (strcmp(address, "0.0.0.0") != 0))
-  {
-    if(!(options & OPT_QUIET))
-    {
-      fprintf(stderr, "warning: for GNUDIP the \"address\" parpameter is only used if set to \"0.0.0.0\" thus making an offline request.\n");
-    }
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int GNUDIP_update_entry(void)
-{
-  unsigned char digestbuf[MD5_DIGEST_BYTES];
-  char buf[BUFFER_SIZE+1];
-  char *p;
-  int bytes;
-  int ret;
-  int i;
-  char *domainname;
-  char gnudip_request[2]; 
-
-  // send an offline request if address 0.0.0.0 is used
-  // otherwise, we ignore the address and send an update request
-  gnudip_request[0] = strcmp(address, "0.0.0.0") == 0 ? '1' : '0';
-  gnudip_request[1] = '\0';
-
-  // find domainname
-  for(p=host; *p != '\0' && *p != '.'; p++);
-  if(*p != '\0') { p++; }
-  if(*p == '\0')
-  {
-    return(UPDATERES_ERROR);
-  }
-  domainname = p;
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  if((bytes=read_input(buf, BUFFER_SIZE)) <= 0)
-  {
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-  buf[bytes] = '\0';
-  dprintf((stderr, "bytes: %d\n", bytes));
-  dprintf((stderr, "server output: %s\n", buf));
-
-  // buf holds the shared secret
-  chomp(buf);
-
-  // use the auth buffer
-  md5_buffer(password, strlen(password), digestbuf);
-  for(i=0, p=auth; i<MD5_DIGEST_BYTES; i++, p+=2)
-  {
-    sprintf(p, "%02x", digestbuf[i]);
-  }
-  strncat(auth, ".", 255-strlen(auth));
-  strncat(auth, buf, 255-strlen(auth));
-  dprintf((stderr, "auth: %s\n", auth));
-  md5_buffer(auth, strlen(auth), digestbuf);
-  for(i=0, p=buf; i<MD5_DIGEST_BYTES; i++, p+=2)
-  {
-    sprintf(p, "%02x", digestbuf[i]);
-  }
-  strcpy(auth, buf);
-
-  dprintf((stderr, "auth: %s\n", auth));
-
-  snprintf(buf, BUFFER_SIZE, "%s:%s:%s:%s\n", user_name, auth, domainname,
-      gnudip_request);
-  output(buf);
-
-  bytes = 0;
-  if((bytes=read_input(buf, BUFFER_SIZE)) <= 0)
-  {
-    close(client_sockfd);
-    return(UPDATERES_ERROR);
-  }
-  buf[bytes] = '\0';
-
-  dprintf((stderr, "bytes: %d\n", bytes));
-  dprintf((stderr, "server output: %s\n", buf));
-
-  close(client_sockfd);
-
-  if(sscanf(buf, "%d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 0:
-      if(!(options & OPT_QUIET))
-      {
-        printf("update request successful\n");
-      }
-      break;
-
-    case 1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("invalid login attempt\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 2:
-      if(!(options & OPT_QUIET))
-      {
-        fprintf(stderr, "offline request successful\n");
-      }
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("unknown return code: %d\n", ret);
-      }
-      return(UPDATERES_ERROR);
-      break;
-  }
-
-  return(UPDATERES_OK);
-}
+#ifdef QDNS
+	if(!strcmp(server,"members.3322.org") || !strcmp(server,"ddns.honeywell-smarthome.com") || !(options & OPT_QUIET))
+#else
+	if(!(options & OPT_QUIET))
 #endif
-
-int JUSTL_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if(host == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    host = strdup(buf);
-  }
-
-  if(interface == NULL && address == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      fprintf(stderr, "you must provide either an interface or an address\n");
-      return(-1);
-    }
-    if(interface) { free(interface); }
-    printf("interface: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    option_handler(CMD_interface, buf);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int JUSTL_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?direct=1&", request);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "username", user_name);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "password", password);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "host", host);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "ip", address);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
       {
-        show_message("strange server response, are you connecting to the right server?\n");
+	#if(NETGEAR_PROJECT)
+		show_ddns_status(3);
+	#endif
+	show_message("authentication failure\n");
       }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 200:
-      if(strstr(buf, " set ") != NULL)
-      {
-        if(!(options & OPT_QUIET))
-        {
-          printf("request successful\n");
-        }
-      }
-      else
-      {
-        show_message("error processing request\n");
-        if(!(options & OPT_QUIET))
-        {
-          fprintf(stderr, "server output: %s\n", buf);
-        }
-        return(UPDATERES_ERROR);
-      }
-      break;
-
-    case 401:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      return(UPDATERES_SHUTDOWN);
+      retval = UPDATERES_SHUTDOWN;
       break;
 
     default:
       if(!(options & OPT_QUIET))
       {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        show_message("server response: %s\n", auth);
-      }
-      return(UPDATERES_ERROR);
-      break;
-  }
-
-  return(UPDATERES_OK);
-}
-
-int DYNS_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if(host == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    host = strdup(buf);
-  }
-
-  if(interface == NULL && address == NULL)
-  {
-    if(options & OPT_DAEMON)
-    {
-      fprintf(stderr, "you must provide either an interface or an address\n");
-      return(-1);
-    }
-    if(interface) { free(interface); }
-    printf("interface: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    chomp(buf);
-    option_handler(CMD_interface, buf);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int DYNS_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?", request);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "username", user_name);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "password", password);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "host", host);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s", "ip", address);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 200:
-      if(strstr(buf, "200 Host") != NULL)
-      {
-        if(!(options & OPT_QUIET))
-        {
-          printf("request successful\n");
-        }
-      }
-      else if(strstr(buf, "400 Bad Request") != NULL)
-      {
-        if(!(options & OPT_QUIET))
-        {
-          printf("bad request\n");
-        }
-      }
-      else if(strstr(buf, "401 User") != NULL)
-      {
-        if(!(options & OPT_QUIET))
-        {
-          printf("authentication failure (username/password)\n");
-        }
-      }
-      else if(strstr(buf, "405 Hostname") != NULL)
-      {
-        if(!(options & OPT_QUIET))
-        {
-          printf("authentication failure (hostname not found)\n");
-        }
-      }
-
-      else
-      {
-        show_message("error processing request\n");
-        if(!(options & OPT_QUIET))
-        {
-          fprintf(stderr, "server output: %s\n", buf);
-        }
-        return(UPDATERES_ERROR);
-      }
-
-      break;
-
-    case 405:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        show_message("server response: %s\n", auth);
-      }
-      return(UPDATERES_ERROR);
-      break;
-  }
-
-  return(UPDATERES_OK);
-}
-
-int HN_check_info(void)
-{
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int HN_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?ver=%d&", request, 1);
-  output(buf);
-  if(address)
-  {
-    snprintf(buf, BUFFER_SIZE, "%s=%s&", "IP", address);
-    output(buf);
-  }
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s [%s] (%s)\015\012", 
-      "ez-update", VERSION, OS, (options & OPT_DAEMON) ? "daemon" : "", "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    char *p;
-
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 200:
-      ret = -1;
-      if((p=strstr(buf, "DDNS_Response_")) != NULL)
-      {
-         sscanf(p, "DDNS_Response_%*code=%3d", &ret);
-      }
-
-      /*
-       * 101 - Successfully Updated
-       * 201 - Failure because previous update occured
-       *       less than 300 seconds ago
-       * 202 - Failure because of server error
-       * 203 - Failure because account is frozen (by admin)
-       * 204 - Failure because account is locked (by user)
-       */
-      switch(ret)
-      {
-        case -1:
-          if(!(options & OPT_QUIET))
-          {
-            show_message("strange server response, are you connecting to the right server?\n");
-          }
-          return(UPDATERES_ERROR);
-          break;
-
-        case 101:
-          if(!(options & OPT_QUIET))
-          {
-            printf("request successful\n");
-          }
-          break;
-
-        case 201:
-          show_message("Last update was less than %d seconds ago.\n", 300);
-          return(UPDATERES_ERROR);
-          break;
-
-        case 202:
-          show_message("Server error.\n");
-          return(UPDATERES_ERROR);
-          break;
-
-        case 203:
-          show_message("Failure because account is frozen (by admin).\n");
-          return(UPDATERES_SHUTDOWN);
-          break;
-
-        case 204:
-          show_message("Failure because account is locked (by user).\n");
-          return(UPDATERES_SHUTDOWN);
-          break;
-
-        default:
-          if(!(options & OPT_QUIET))
-          {
-            show_message("unknown return code: %d\n", ret);
-            fprintf(stderr, "server response: %s\n", buf);
-          }
-          return(UPDATERES_ERROR);
-          break;
-      }
-      break;
-
-    case 401:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      return(UPDATERES_SHUTDOWN);
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
+	#if(NETGEAR_PROJECT)
+		show_ddns_status(5);
+	#endif
+	// reuse the auth buffer
         *auth = '\0';
         sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
         show_message("unknown return code: %d\n", ret);
         fprintf(stderr, "server response: %s\n", auth);
       }
-      return(UPDATERES_ERROR);
+      retval = UPDATERES_ERROR;
       break;
   }
 
-  return(UPDATERES_OK);
+  return(retval);
 }
-
-int ZONEEDIT_check_info(void)
-{
-  char buf[BUFSIZ+1];
-
-  if((host == NULL) || (*host == '\0'))
-  {
-    if(options & OPT_DAEMON)
-    {
-      return(-1);
-    }
-    if(host) { free(host); }
-    printf("host: ");
-    *buf = '\0';
-    fgets(buf, BUFSIZ, stdin);
-    host = strdup(buf);
-    chomp(host);
-  }
-
-  warn_fields(service->fields_used);
-
-  return 0;
-}
-
-int ZONEEDIT_update_entry(void)
-{
-  char buf[BUFFER_SIZE+1];
-  char *bp = buf;
-  int bytes;
-  int btot;
-  int ret;
-
-  buf[BUFFER_SIZE] = '\0';
-
-  if(do_connect((int*)&client_sockfd, server, port) != 0)
-  {
-    if(!(options & OPT_QUIET))
-    {
-      show_message("error connecting to %s:%s\n", server, port);
-    }
-    return(UPDATERES_ERROR);
-  }
-
-  snprintf(buf, BUFFER_SIZE, "GET %s?", request);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "%s=%s&", "host", host);
-  output(buf);
-  if (address && *address) {
-      snprintf(buf, BUFFER_SIZE, "%s=%s&", "dnsto", address);
-      output(buf);
-  }
-  if (address && *mx && *mx != '0') {
-      snprintf(buf, BUFFER_SIZE, "%s=%s&", "type", "a,mx");
-      output(buf);
-  }
-  snprintf(buf, BUFFER_SIZE, " HTTP/1.0\015\012");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "User-Agent: %s-%s %s (%s)\015\012", 
-      "zoneedit", VERSION, OS, "by Angus Mackay");
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Host: %s\015\012", server);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "Authorization: Basic %s\015\012", auth);
-  output(buf);
-  snprintf(buf, BUFFER_SIZE, "\015\012");
-  output(buf);
-
-  bp = buf;
-  bytes = 0;
-  btot = 0;
-  while((bytes=read_input(bp, BUFFER_SIZE-btot)) > 0)
-  {
-    bp += bytes;
-    btot += bytes;
-    dprintf((stderr, "btot: %d\n", btot));
-  }
-  close(client_sockfd);
-  buf[btot] = '\0';
-
-  dprintf((stderr, "server output: %s\n", buf));
-
-  if(sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1)
-  {
-    ret = -1;
-  }
-
-  switch(ret)
-  {
-    case -1:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("strange server response, are you connecting to the right server?\n");
-      }
-      return(UPDATERES_ERROR);
-      break;
-
-    case 200:
-      if(strstr(buf, "<SUCCESS\n") != NULL)
-      {
-        if(!(options & OPT_QUIET))
-        {
-          printf("request successful\n");
-        }
-      }
-      else
-      {
-        show_message("error processing request\n");
-        if(!(options & OPT_QUIET))
-        {
-          fprintf(stderr, "server output: %s\n", buf);
-        }
-        return(UPDATERES_ERROR);
-      }
-      break;
-
-    case 401:
-      if(!(options & OPT_QUIET))
-      {
-        show_message("authentication failure\n");
-      }
-      return(UPDATERES_SHUTDOWN);
-      break;
-
-    default:
-      if(!(options & OPT_QUIET))
-      {
-        // reuse the auth buffer
-        *auth = '\0';
-        sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-        show_message("unknown return code: %d\n", ret);
-        show_message("server response: %s\n", auth);
-      }
-      return(UPDATERES_ERROR);
-      break;
-  }
-
-  return(UPDATERES_OK);
-}
-
 
 static int is_in_list(char *needle, char **haystack)
 {
@@ -4111,11 +2329,11 @@ int main(int argc, char **argv)
     /* background our selves */
     if(!(options & OPT_FOREGROUND))
     {
-#  if HAVE_SYSLOG_H
+#if HAVE_SYSLOG_H
       close(0);
       close(1);
       close(2);
-#  endif
+#endif
       if(fork() > 0) { exit(0); } /* parent */
     }
 
@@ -4127,10 +2345,10 @@ int main(int argc, char **argv)
     }
 #endif
 
-#  if HAVE_SYSLOG_H
+#if HAVE_SYSLOG_H
     openlog(program_name, LOG_PID, LOG_USER );
     options |= OPT_QUIET;
-#  endif
+#endif
     show_message("ez-ipupdate Version %s, Copyright (C) 1998-2000 Angus Mackay.\n", 
         VERSION);
     show_message("%s started for interface %s host %s using server %s and service %s\n",
@@ -4150,7 +2368,7 @@ int main(int argc, char **argv)
 
         if(ipstr && strchr(ipstr, '.'))
         {
-          struct tm *ts;
+          struct tm *ts = NULL;
           char timebuf[64];
 
           inet_aton(ipstr, &sin.sin_addr);
@@ -4182,7 +2400,6 @@ int main(int argc, char **argv)
         last_sig = 0;
       }
 #endif
-
       if(get_if_addr(sock, interface, &sin2) == 0)
       {
         ifresolve_warned = 0;
@@ -4198,21 +2415,40 @@ int main(int argc, char **argv)
           if(address) { free(address); }
           address = strdup(inet_ntoa(sin.sin_addr));
 
-          if((updateres=service->update_entry()) == UPDATERES_OK)
-          {
+	#if(NETGEAR_PROJECT)
+	for( i = 0; i < ntrys; i++)
+	{	
+		int retsts = -1;
+		if(( retsts = service->update_entry()) == UPDATERES_OK)
+		{ 
+			show_ddns_status(1);
+			retval = 0;
+			break;
+		}
+		if((retsts != UPDATERES_TIMEOUT) && (i+1 != ntrys)) { sleep(30); }
+	}
+	if ( retval == 0 )
+	#else
+	  if((updateres=service->update_entry()) == UPDATERES_OK)
+	#endif
+	  {
             last_update = time(NULL);
             local_update_period = update_period;
 
             show_message("successful update for %s->%s (%s)\n",
                 interface, inet_ntoa(sin.sin_addr), N_STR(host));
-
-            if(post_update_cmd)
+	    #if(NETGEAR_PROJECT)	
+	    send_syslog( 1, N_STR(host));
+	    #endif    
+            if(post_update_cmd && cache_file)
             {
               int res;
 
               if(post_update_cmd)
               {
-                sprintf(post_update_cmd_arg, "%s", inet_ntoa(sin.sin_addr));
+                //sprintf(post_update_cmd_arg, "%s", inet_ntoa(sin.sin_addr));
+		      /* Save successful update ip and time to file.*/
+		      sprintf(post_update_cmd_arg, "%d %s", time(NULL), inet_ntoa(sin.sin_addr));
 
                 if((res=exec_cmd(post_update_cmd)) != 0)
                 {
@@ -4250,6 +2486,10 @@ int main(int argc, char **argv)
                 interface, inet_ntoa(sin.sin_addr), N_STR(host));
             memset(&sin, 0, sizeof(sin));
 
+	    #if(NETGEAR_PROJECT)
+	    send_syslog( 0, N_STR(host));
+	    #endif
+			
             // double the time between attempts between each failure to update
             // this gets set back to the normal value the next time we get a
             // successful update
@@ -4298,7 +2538,10 @@ int main(int argc, char **argv)
           show_message("(%s) unable to resolve interface %s\n",
               N_STR(host), interface);
         }
-        sleep(resolv_period);
+        #if(NETGEAR_PROJECT)
+	show_ddns_status(2);
+	#endif
+	sleep(resolv_period);
       }
     }
 
@@ -4470,10 +2713,11 @@ int main(int argc, char **argv)
         }
       }
     }
-    else
+   /* else
     {
       fprintf(stderr, "no update needed at this time\n");
     }
+	*/
   }
 
 #ifdef IF_LOOKUP
