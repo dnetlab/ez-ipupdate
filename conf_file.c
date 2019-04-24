@@ -31,6 +31,10 @@
 #  include <config.h>
 #endif
 
+#if HAVE_ERRNO_H
+#  include <errno.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

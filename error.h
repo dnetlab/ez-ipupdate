@@ -1,6 +1,10 @@
 #ifndef _ERROR_H
 #define _ERROR_H
 
+#if HAVE_ERRNO_H
+#  include <errno.h>
+#endif
+
 #if HAVE_STRERROR
 extern int errno;
 #  define error_string strerror(errno)
